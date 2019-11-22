@@ -105,3 +105,4 @@ venv.bak/
 
 #our own huge data
 data/Arrest_Data_from_2010_to_Present.csv
+.idea
