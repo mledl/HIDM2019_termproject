@@ -1,3 +1,25 @@
+# Software and Library Versions
+
+Python: 3.7.4
+
+## Python Packages
+
+Pandas: 0.25.1
+GDAL: 3.0.2
+Fiona: 1.8.13
+Rtree: 0.9.1
+pyproj: 2.4.2.post1
+Shapely: 1.6.4.post2
+geojson: 2.5.0
+geopandas: 0.6.2
+geojsonio: 0.0.3
+github3.py: 0.7.0
+gmplot: 1.2.0
+
+Installing the should work out of the box on MacOS and Linux systems.
+For Windows follow the instructions provided here https://geoffboeing.com/2014/09/using-geopandas-windows/.
+
+
 # Data Analysis
 
 This section gives an overview over which columns are present in the datasets.
