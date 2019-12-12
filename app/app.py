@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
-import geopandas as gpd
+# import geopandas as gpd
 import wordcloud
 import os
 
@@ -77,19 +77,15 @@ results_save_path = os.path.abspath("..") + os.path.sep + "data" + os.path.sep +
 # read the csv files and geojson
 df_arrest = pd.read_csv(arrest_dataset_path, sep=',')
 df_trip = pd.read_csv(trip_dataset_path, sep=',')
-df_geo = gpd.read_file(geolocation_data_path)
+#df_geo = gpd.read_file(geolocation_data_path)
 
-# quick statistics of the dataframes
+# quick statistics before feature extraction and data cleaning
 print("\n")
+print("Datasets before preprocessing:\n")
 df_arrest.info()
 print("\n\n")
 df_trip.info()
 print("\n")
-
-# print rows containing nan
-arrest_nan_df = df_arrest[df_arrest.isna().any(axis=1)]
-print(arrest_nan_df)
-
 
 ###################################################################################
 # Data preprocessing
@@ -102,31 +98,74 @@ trip_cols = ['Start Time', 'End Time', 'Starting Station ID', 'Starting Station 
 df_arrest = df_arrest[arrest_cols]
 df_trip = df_trip[trip_cols]
 
+# drop rows according to missing values in important columns
+df_arrest = df_arrest.dropna(subset=['Charge Group Description'])
+df_trip = df_trip.dropna(subset=['Ending Station Latitude', 'Starting Station Latitude'])
+
 # replace Nan in Charge Group Description and Charge Description with Unknown/UNKNOWN
 df_arrest['Charge Group Description'].fillna('Unknown', inplace=True)
 df_arrest['Charge Description'].fillna('UNKNOWN', inplace=True)
 
+# replace missing arrest time with midday (1200)
+df_arrest['Time'].fillna(1200, inplace=True)
+df_arrest['Cross Street'].fillna('Unknown', inplace=True)
+
+# quick summary of the data after preprocessing
+print("\n")
+print("Datasets after preprocessing:\n")
+df_arrest.info()
+print("\n\n")
+df_trip.info()
+print("\n")
+
 ###################################################################################
 # Analyse arrest dataset
 ###################################################################################
+def generate_wordcloud(column):
+    # get list of words
+    column_elems = "".join(desc for desc in df_arrest[column])
+
+    # establish the wordclouds
+    elems_wc = wordcloud.WordCloud().generate(column_elems)
+    plt.figure(figsize=[10, 10])
+    plt.imshow(elems_wc, interpolation='bilinear')
+    plt.axis("off")
+    plt.savefig(results_save_path + "wordcloud_" + column.replace(" ", "_") + ".png", format='png')
+
+
+def generate_histogram(name, bin_color, x, y, data, xlabel, ylabel):
+    sb.set(style="whitegrid")
+    f, ax = plt.subplots(figsize=(30, 15))
+    sb.set_color_codes("pastel")
+    sb.barplot(x=x, y=y, data=data, label="Total", color=bin_color)
+    ax.legend(ncol=2, loc="lower right", frameon=True)
+    ax.set(ylabel=ylabel, xlabel=xlabel)
+    sb.despine(left=True, bottom=True)
+    plt.savefig(results_save_path + "histogram_" + name.replace(" ", "_") + ".png", format='png')
+
+
+def generate_df_count(df_data, column):
+    df_count = pd.DataFrame(df_data.groupby(column)\
+                                          .size()
+                                          .sort_values(ascending=False)\
+                                          .rename('Counts')
+                                          .reset_index())
+    return df_count
+
+
 # most frequently committed crimes - wordcount
-print(df_arrest['Charge Description'])
-charge_desc_list = "".join(desc for desc in df_arrest['Charge Description'])
-charge_group_desc_list = "".join(desc for desc in df_arrest['Charge Group Description'])
+#generate_wordcloud('Charge Description')
+#generate_wordcloud('Charge Group Description')
 
-# establish the wordclouds
-charge_desc_wc = wordcloud.WordCloud().generate(charge_desc_list)
-plt.figure(figsize=[10, 10])
-plt.imshow(charge_desc_wc, interpolation='bilinear')
-plt.axis("off")
-plt.savefig(results_save_path + "charge_description_wordcloud.png", format='png')
+# most frequently committed crimes - histograms
+df_charge_group_desc_count = generate_df_count(df_arrest, 'Charge Group Description')
+df_charge_desc_count = generate_df_count(df_arrest, 'Charge Description')
 
-charge_group_desc_wc = wordcloud.WordCloud().generate(charge_group_desc_list)
-plt.figure(figsize=[10, 10])
-plt.imshow(charge_group_desc_wc, interpolation='bilinear')
-plt.axis("off")
-plt.savefig(results_save_path + "charge_group_description_wordcloud.png", format='png')
 
-plt.show()
+generate_histogram('Charge Group Description', 'b', 'Counts', 'Charge Group Description',
+                   df_charge_group_desc_count.iloc[:10, :], 'Counts', 'Charge Group Description')
+generate_histogram('Charge Description', 'b', 'Counts', 'Charge Description', df_charge_desc_count.iloc[:10, :],
+                   'Counts', 'Charge Description')
+
 
 ###################################################################################
